@@ -12,10 +12,7 @@ import io.pleo.antaeus.models.Customer
 import io.pleo.antaeus.models.Invoice
 import io.pleo.antaeus.models.InvoiceStatus
 import io.pleo.antaeus.models.Money
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class AntaeusDal(private val db: Database) {
@@ -38,6 +35,29 @@ class AntaeusDal(private val db: Database) {
         }
     }
 
+    /**
+     * Get a list of invoices in batch size of [limit] starting from [offsetId]
+     */
+    fun fetchInvoicesBatch(offsetId: Int, limit: Int): List<Invoice> {
+        if (!offsetId.equals(-1)) {
+            return transaction(db) {
+                InvoiceTable
+                        .select({ InvoiceTable.id.greater<Int, Int>(offsetId) })
+                        .limit(limit)
+                        .orderBy(InvoiceTable.id, true)
+                        .map { it.toInvoice() }
+            }
+        } else {
+            return transaction(db) {
+                InvoiceTable
+                        .selectAll()
+                        .limit(limit)
+                        .orderBy(InvoiceTable.id, true)
+                        .map { it.toInvoice() }
+            }
+        }
+    }
+
     fun createInvoice(amount: Money, customer: Customer, status: InvoiceStatus = InvoiceStatus.PENDING): Invoice? {
         val id = transaction(db) {
             // Insert the invoice and returns its new id.
@@ -51,6 +71,18 @@ class AntaeusDal(private val db: Database) {
         }
 
         return fetchInvoice(id!!)
+    }
+
+    fun updateInvoice(id: Int, status: InvoiceStatus): Invoice? {
+        transaction(db) {
+            // Update the invoice with the new details.
+            InvoiceTable
+                    .update ({InvoiceTable.id eq id}) {
+                        it[this.status] = status.toString()
+                    }
+        }
+
+        return fetchInvoice(id)
     }
 
     fun fetchCustomer(id: Int): Customer? {
