@@ -15,24 +15,15 @@ class BillingService(
         private val invoiceService: InvoiceService,
         private val paymentProvider: PaymentProvider
 ) {
-
     private val logger = LoggerFactory.getLogger("BillingService");
 
     // Set the max number of tries for the invoice payment attempt before failure to 3
     private val MAX_NO_OF_PAYMENT_TRIES: Int = 3
 
-//    // Create a timer task here to kick off the function to execute the bills
-//    inline fun Timer.schedule(
-//            time: Date,
-//            crossinline action: TimerTask.() -> Unit
-//    ): TimerTask {
-//
-//    }
-
     /**
      * Fetches all invoices for retry from the DB in batches of [batchSize] and attempts to pay these invoices.
      */
-    fun processRetryInvoices(batchSize: Int) = runBlocking {
+    fun processRetryInvoices(batchSize: Int) {
         // Fetch the initial batch
         var invoices = invoiceService.fetchPendingInvoicesByBatch(-1, batchSize)
         var lastInvoiceId: Int = 0
@@ -53,7 +44,7 @@ class BillingService(
     /**
      * Fetches all pending invoices from the DB in batches of [batchSize] and attempts to pay these invoices.
      */
-    fun processPendingInvoices(batchSize: Int) = runBlocking {
+    fun processPendingInvoices(batchSize: Int) {
         // Fetch the initial batch
         var invoices = invoiceService.fetchPendingInvoicesByBatch(-1, batchSize)
         var lastInvoiceId: Int = 0
@@ -74,7 +65,7 @@ class BillingService(
     /**
      * Given a list of [invoices] if will start off a new thread for each of these invoices
      */
-    fun processInvoicesConcurrently(invoices: List<Invoice>) = runBlocking {
+    private fun processInvoicesConcurrently(invoices: List<Invoice>) = runBlocking {
         // Process each invoice concurrently
         for (invoice: Invoice in invoices) {
             // Start a new Coroutine to pay the invoice in a new thread
@@ -95,7 +86,7 @@ class BillingService(
      * @throws InvoiceStatusUpdateFailedException if the status update failed
      * @throws InvoiceNotFoundException id the given invoice does not exist
      */
-    fun payInvoice(invoice: Invoice) {
+    private fun payInvoice(invoice: Invoice) {
         // Process the invoice here
         val isPaymentSuccessful = paymentProvider.charge(invoice)
 
