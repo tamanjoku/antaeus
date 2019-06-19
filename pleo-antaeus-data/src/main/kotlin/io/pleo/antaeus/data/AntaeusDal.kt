@@ -14,6 +14,7 @@ import io.pleo.antaeus.models.InvoiceStatus
 import io.pleo.antaeus.models.Money
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.joda.time.DateTime
 
 class AntaeusDal(private val db: Database) {
     fun fetchInvoice(id: Int): Invoice? {
@@ -38,11 +39,12 @@ class AntaeusDal(private val db: Database) {
     /**
      * Get a list of invoices in batch size of [limit] starting from [offsetId]
      */
-    fun fetchInvoicesBatch(offsetId: Int, limit: Int): List<Invoice> {
+    fun fetchPendingInvoicesByBatch(offsetId: Int, limit: Int): List<Invoice> {
         if (!offsetId.equals(-1)) {
             return transaction(db) {
                 InvoiceTable
-                        .select({ InvoiceTable.id.greater<Int, Int>(offsetId) })
+                        .select { InvoiceTable.id.greater<Int, Int>(offsetId) and
+                                InvoiceTable.status.eq(InvoiceStatus.PENDING.toString()) }
                         .limit(limit)
                         .orderBy(InvoiceTable.id, true)
                         .map { it.toInvoice() }
@@ -50,7 +52,33 @@ class AntaeusDal(private val db: Database) {
         } else {
             return transaction(db) {
                 InvoiceTable
-                        .selectAll()
+                        .select { InvoiceTable.status.eq(InvoiceStatus.PENDING.toString()) }
+                        .limit(limit)
+                        .orderBy(InvoiceTable.id, true)
+                        .map { it.toInvoice() }
+            }
+        }
+    }
+
+    /**
+     * Get a list of invoices in batch size of [limit] starting from [offsetId]
+     */
+    fun fetchPendingInvoicesForRetryByBatch(offsetId: Int, limit: Int, retryFrequency: Int): List<Invoice> {
+        if (!offsetId.equals(-1)) {
+            return transaction(db) {
+                InvoiceTable
+                        .select { InvoiceTable.id.greater<Int, Int>(offsetId) and
+                                InvoiceTable.status.eq(InvoiceStatus.RETRY.toString()) and
+                                InvoiceTable.lastPaymentDate.greaterEq(DateTime.now().minusDays(2)) }
+                        .limit(limit)
+                        .orderBy(InvoiceTable.id, true)
+                        .map { it.toInvoice() }
+            }
+        } else {
+            return transaction(db) {
+                InvoiceTable
+                        .select { InvoiceTable.status.eq(InvoiceStatus.RETRY.toString()) and
+                                InvoiceTable.lastPaymentDate.greaterEq(DateTime.now().minusDays(2)) }
                         .limit(limit)
                         .orderBy(InvoiceTable.id, true)
                         .map { it.toInvoice() }
@@ -67,18 +95,21 @@ class AntaeusDal(private val db: Database) {
                     it[this.currency] = amount.currency.toString()
                     it[this.status] = status.toString()
                     it[this.customerId] = customer.id
+                    it[this.noOfPaymentTries] = 0
                 } get InvoiceTable.id
         }
 
         return fetchInvoice(id!!)
     }
 
-    fun updateInvoice(id: Int, status: InvoiceStatus): Invoice? {
+    fun updateInvoice(id: Int, status: InvoiceStatus, lastPaymentDate: DateTime, noOfPaymentTries: Int): Invoice? {
         transaction(db) {
             // Update the invoice with the new details.
             InvoiceTable
                     .update ({InvoiceTable.id eq id}) {
                         it[this.status] = status.toString()
+                        it[this.lastPaymentDate] = lastPaymentDate
+                        it[this.noOfPaymentTries] = noOfPaymentTries
                     }
         }
 
