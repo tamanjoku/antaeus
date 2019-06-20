@@ -78,6 +78,11 @@ effectiveness of our system, the efficiency and effectiveness of our payment pro
 2. I could have catered for a lot more error cases, had I had time and should this have been a real live system, some of those scenarios would have been viable, for one, timeout errors,
 insufficient funds errors, and many more cases.
 
+3. A lot of the hard coded constants that control the day of the month to execute the billing and also the frequency of retries, the batch size and the maximum number of retries
+could all be managed using a property file that is read on runtime, or if we need it to be even more configurable and the changes to this happen on the fly, we could maintain a
+settings table that is read into a singleton config bean on startup, and create a management endpoint that can be called when these settings need to be updated and refreshed, so
+we do not need to bring down the application when there is a need to modify these.
+
 ## Some Roadblocks
 
 1. This not a roadblock per say, but I had to learn kotlin, which was easier because I already knew Java, but things are still slight different. Majorly the OO concepts are still the same
