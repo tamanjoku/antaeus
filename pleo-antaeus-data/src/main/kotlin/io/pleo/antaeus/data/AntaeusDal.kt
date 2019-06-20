@@ -96,6 +96,7 @@ class AntaeusDal(private val db: Database) {
                     it[this.status] = status.toString()
                     it[this.customerId] = customer.id
                     it[this.noOfPaymentTries] = 0
+                    it[this.lastPaymentDate] = DateTime.now()
                 } get InvoiceTable.id
         }
 

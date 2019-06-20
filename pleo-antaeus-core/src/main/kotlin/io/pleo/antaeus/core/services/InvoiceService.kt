@@ -15,8 +15,19 @@ class InvoiceService(private val dal: AntaeusDal) {
        return dal.fetchInvoices()
     }
 
+    /**
+     * This will fetch all pending invoices from the DB in batches of [limit] and id is greater than [offsetId]
+     */
     fun fetchPendingInvoicesByBatch(offsetId: Int, limit: Int): List<Invoice> {
         return dal.fetchPendingInvoicesByBatch(offsetId, limit)
+    }
+
+    /**
+     * This will fetch all invoices that have been marked for retry from the DB in batches of [limit] and id is greater
+     * than [offsetId] and last payment try date was [retryFrequency] days ago.
+     */
+    fun fetchPendingInvoicesForRetryByBatch(offsetId: Int, limit: Int, retryFrequency: Int): List<Invoice> {
+        return dal.fetchPendingInvoicesForRetryByBatch(offsetId, limit, retryFrequency)
     }
 
     fun update(id: Int, status: InvoiceStatus, lastPaymentDate: DateTime, noOfPaymentTries: Int): Invoice {
