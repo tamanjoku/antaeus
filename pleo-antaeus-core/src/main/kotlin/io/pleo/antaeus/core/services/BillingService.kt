@@ -112,7 +112,8 @@ class BillingService(
     }
 
     /**
-     * Given a list of [invoices] if will start off a new thread for each of these invoices
+     * Given a list of [invoices] if will start off a new thread for each of these invoices.
+     * Finish processing this batch before moving on to the new batch.
      */
     private fun processInvoicesConcurrently(invoices: List<Invoice>) = runBlocking {
         // Process each invoice concurrently
